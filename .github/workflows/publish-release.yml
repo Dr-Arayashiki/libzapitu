@@ -102,7 +102,6 @@ jobs:
           echo "EOF" >> $GITHUB_OUTPUT
 
       - name: Create GitHub Release
-        if: steps.sync_tag.outputs.retagged != 'true'
         uses: meeDamian/github-release@2.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -117,7 +116,6 @@ jobs:
   npm-publish:
     runs-on: ubuntu-latest
     needs: github-release
-    if: needs.github-release.outputs.retagged != 'true'
     steps:
       - name: Checkout
         uses: actions/checkout@v3
