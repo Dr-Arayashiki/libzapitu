@@ -570,6 +570,31 @@ export const makeMessagesRecvSocket = (config: SocketConfig) => {
 				})
 				authState.creds.registered = true
 				ev.emit('creds.update', authState.creds)
+				break
+			case 'passkey_prologue_request': {
+				const optsNode = getBinaryNodeChild(node, 'passkey_request_options')
+				let publicKey: Uint8Array | Record<string, unknown> | undefined
+				const content = optsNode?.content
+				if (content instanceof Buffer || content instanceof Uint8Array) {
+					publicKey = content
+				} else if (typeof content === 'string') {
+					try {
+						publicKey = JSON.parse(content) as Record<string, unknown>
+					} catch {
+						publicKey = Buffer.from(content, 'utf-8')
+					}
+				}
+
+				ev.emit('pair.passkey.request', { publicKey, raw: node })
+				logger.info('passkey_prologue_request — use WhatsApp Web + extensão')
+				break
+			}
+			case 'crsc_continuation': {
+				const primaryNode = getBinaryNodeChild(node, 'primary_ephemeral_identity')
+				ev.emit('pair.passkey.confirmation', { raw: node })
+				logger.info({ hasPrimary: !!primaryNode }, 'passkey continuation (crsc_continuation)')
+				break
+			}
 		}
 
 		if (Object.keys(result).length) {

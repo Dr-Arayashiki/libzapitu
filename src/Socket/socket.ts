@@ -43,13 +43,11 @@ import {
 import { WebSocketClient } from './Client'
 import { executeWMexQuery } from './mex'
 
-import {	
+import {
 	type NewChatMessageCapInfo,
 	QueryIds,
 	ReachoutTimelockEnforcementType,
-	type ReachoutTimelockState,
-	
-
+	type ReachoutTimelockState
 } from '../Types'
 
 /**
@@ -113,7 +111,7 @@ export const makeSocket = (config: SocketConfig) => {
 	let lastDateRecv: Date
 	let epoch = 1
 	let keepAliveReq: NodeJS.Timeout
-	let qrTimer: NodeJS.Timeout
+	let qrTimer: NodeJS.Timeout | undefined
 	let closed = false
 
 	const uqTagId = generateMdTagPrefix()
@@ -588,6 +586,32 @@ export const makeSocket = (config: SocketConfig) => {
 
 		const pairDeviceNode = getBinaryNodeChild(stanza, 'pair-device')
 		const refNodes = getBinaryNodeChildren(pairDeviceNode, 'ref')
+		const passkeyOpts = getBinaryNodeChild(pairDeviceNode, 'passkey_request_options')
+		const passkeyNode = passkeyOpts || getBinaryNodeChild(pairDeviceNode, 'passkey')
+
+		if (passkeyNode && !refNodes.length) {
+			if (qrTimer) {
+				clearTimeout(qrTimer)
+				qrTimer = undefined
+			}
+
+			let publicKey: Uint8Array | Record<string, unknown> | undefined
+			const content = passkeyNode.content
+			if (content instanceof Buffer || content instanceof Uint8Array) {
+				publicKey = content
+			} else if (typeof content === 'string') {
+				try {
+					publicKey = JSON.parse(content) as Record<string, unknown>
+				} catch {
+					publicKey = Buffer.from(content, 'utf-8')
+				}
+			}
+
+			ev.emit('pair.passkey.request', { publicKey, raw: passkeyNode })
+			logger.info('pair-device passkey request — use WhatsApp Web + extensão')
+			return
+		}
+
 		const noiseKeyB64 = Buffer.from(creds.noiseKey.public).toString('base64')
 		const identityKeyB64 = Buffer.from(creds.signedIdentityKey.public).toString('base64')
 		const advB64 = creds.advSecretKey
@@ -759,7 +783,6 @@ export const makeSocket = (config: SocketConfig) => {
 			generateMessageTag
 		)
 	}
-
 
 	return {
 		type: 'md' as 'md',

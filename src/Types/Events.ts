@@ -9,6 +9,24 @@ import { Label } from './Label'
 import { LabelAssociation } from './LabelAssociation'
 import { MessageUpsertType, MessageUserReceiptUpdate, WAMessage, WAMessageKey, WAMessageUpdate } from './Message'
 import { ConnectionState } from './State'
+import type { BinaryNode } from '../WABinary'
+
+export type PairPasskeyRequestEvent = {
+	publicKey?: Uint8Array | Record<string, unknown>
+	raw?: BinaryNode
+}
+
+export type PairPasskeyConfirmationEvent = {
+	code?: string
+	skipHandoffUX?: boolean
+	raw?: BinaryNode
+}
+
+export type PairPasskeyErrorEvent = {
+	error: Error
+	continuation?: boolean
+	raw?: BinaryNode
+}
 
 export type BaileysEventMap = {
 	/** connection state has been updated -- WS closed, opened, connecting etc. */
@@ -81,6 +99,11 @@ export type BaileysEventMap = {
 	'newsletter.view': { id: string; server_id: string; count: number }
 	'newsletter-participants.update': { id: string; author: string; user: string; new_role: string; action: string }
 	'newsletter-settings.update': { id: string; update: any }
+
+	/** Passkey pairing (shortcake) — account requires WebAuthn in browser, not QR */
+	'pair.passkey.request': PairPasskeyRequestEvent
+	'pair.passkey.confirmation': PairPasskeyConfirmationEvent
+	'pair.passkey.error': PairPasskeyErrorEvent
 }
 
 export type BufferedEventData = {
